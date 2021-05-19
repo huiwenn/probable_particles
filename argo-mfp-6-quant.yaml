@@ -1,0 +1,46 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: argo-mfp-6-quant
+spec:
+  template:
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+      - name: gpu-container
+        image: gitlab-registry.nautilus.optiputer.net/prp/jupyter-stack/tensorflow
+        command: 
+          - sh
+          - -c
+          - "ls /opt/repo/argoversemfp && cd /opt/repo/argoversemfp && ./train6_quant.sh"
+        volumeMounts:
+          - name: git-repo
+            mountPath: /opt/repo
+        resources:
+          limits:
+            memory: 12Gi
+            nvidia.com/gpu: "1"
+            cpu: 1
+            ephemeral-storage: 4Gi
+          requests:
+            memory: 2Gi
+            cpu: 1  
+      initContainers:
+      - name: init-clone-repo
+        image: alpine/git
+        args:
+          - clone
+          - --single-branch
+          - https://gitlab.nautilus.optiputer.net/Sophiaphia/argoversemfp
+          - /opt/repo/argoversemfp
+        volumeMounts:
+          - name: git-repo
+            mountPath: /opt/repo
+      volumes:
+      - name: git-repo
+        emptyDir: {}
+      restartPolicy: Never
+  backoffLimit: 3
